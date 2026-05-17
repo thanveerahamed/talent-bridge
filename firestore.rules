@@ -1,0 +1,39 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper: check if the caller is an admin
+    function isAdmin() {
+      return request.auth != null &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.roles.hasAny(['admin']);
+    }
+
+    // Users — owner read/write own doc, admin can read all
+    match /users/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+      allow read: if isAdmin();
+      // Admin can update roles (for promotion)
+      allow update: if isAdmin();
+    }
+
+    // Referrers — owner full access to own doc, seekers can read approved only, admin full access
+    match /referrers/{uid} {
+      allow read, create, update: if request.auth != null && request.auth.uid == uid;
+      allow read: if request.auth != null && resource.data.status == 'approved';
+      allow read, write: if isAdmin();
+    }
+
+    // Contact logs — any authenticated user can create, admin can read
+    match /contactLogs/{logId} {
+      allow create: if request.auth != null;
+      allow read: if isAdmin();
+    }
+
+    // Admin logs — only readable by admins, written server-side or by admins
+    match /adminLogs/{logId} {
+      allow create: if isAdmin();
+      allow read: if isAdmin();
+    }
+  }
+}
