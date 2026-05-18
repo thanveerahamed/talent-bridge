@@ -149,10 +149,8 @@ export function AppLayout() {
         <div className="flex items-center gap-1">
           <ThemeToggle />
           <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" aria-label="Open menu">
-                <Menu className="h-5 w-5" />
-              </Button>
+            <DropdownMenuTrigger className="inline-flex items-center justify-center rounded-lg p-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground outline-none">
+              <Menu className="h-5 w-5" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" side="bottom" sideOffset={8}>
               <DropdownMenuItem onClick={() => navigate('/privacy')}>

@@ -42,7 +42,9 @@ export function AdminUsersPage() {
       }
     };
     fetchData();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const handlePromoteAdmin = async (targetUser: UserProfile) => {

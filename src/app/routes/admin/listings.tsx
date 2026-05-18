@@ -64,7 +64,9 @@ export function AdminListingsPage() {
       }
     };
     fetchData();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [filter]);
 
   const handleStatusChange = async (
