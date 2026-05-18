@@ -1,6 +1,6 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useAuth } from '@/hooks/use-auth';
-import { searchReferrersByCompany, logContact } from '@/lib/firestore';
+import { searchReferrersByCompany, getVisibleReferrers, logContact } from '@/lib/firestore';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -16,16 +16,18 @@ import {
   Building2,
   Loader2,
   ExternalLink,
+  ChevronRight,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { ReferrerProfile, ContactMethod } from '@/types';
 
-const contactConfig: Record<
-  ContactMethod,
-  { icon: typeof Mail; label: string; color: string }
-> = {
+const contactConfig: Record<ContactMethod, { icon: typeof Mail; label: string; color: string }> = {
   email: { icon: Mail, label: 'Email', color: 'bg-blue-500/10 text-blue-600 hover:bg-blue-500/20' },
-  phone: { icon: Phone, label: 'Call', color: 'bg-green-500/10 text-green-600 hover:bg-green-500/20' },
+  phone: {
+    icon: Phone,
+    label: 'Call',
+    color: 'bg-green-500/10 text-green-600 hover:bg-green-500/20',
+  },
   whatsapp: {
     icon: MessageCircle,
     label: 'WhatsApp',
@@ -58,23 +60,68 @@ function getContactUrl(method: ContactMethod, referrer: ReferrerProfile): string
 export function SearchPage() {
   const { user } = useAuth();
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState<ReferrerProfile[]>([]);
+  const [referrers, setReferrers] = useState<ReferrerProfile[]>([]);
+  const [searchResults, setSearchResults] = useState<ReferrerProfile[] | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [searching, setSearching] = useState(false);
-  const [searched, setSearched] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
+  const lastDocRef = useRef<unknown>(null);
 
-  const handleSearch = useCallback(async () => {
-    if (!query.trim()) return;
-    setSearching(true);
-    setSearched(true);
+  // Load initial referrers on mount
+  useEffect(() => {
+    (async () => {
+      try {
+        const result = await getVisibleReferrers();
+        setReferrers(result.referrers);
+        lastDocRef.current = result.lastDoc;
+        setHasMore(result.hasMore);
+      } catch {
+        toast.error('Failed to load connectors.');
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  // Load more (pagination)
+  const loadMore = async () => {
+    if (!hasMore || loadingMore) return;
+    setLoadingMore(true);
     try {
-      const referrers = await searchReferrersByCompany(query);
-      setResults(referrers);
+      const result = await getVisibleReferrers(lastDocRef.current);
+      setReferrers((prev) => [...prev, ...result.referrers]);
+      lastDocRef.current = result.lastDoc;
+      setHasMore(result.hasMore);
+    } catch {
+      toast.error('Failed to load more connectors.');
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
+  // Search by company name
+  const handleSearch = useCallback(async () => {
+    const trimmed = query.trim();
+    if (!trimmed) {
+      setSearchResults(null);
+      return;
+    }
+    setSearching(true);
+    try {
+      const results = await searchReferrersByCompany(trimmed);
+      setSearchResults(results);
     } catch {
       toast.error('Search failed. Please try again.');
     } finally {
       setSearching(false);
     }
   }, [query]);
+
+  const handleClearSearch = () => {
+    setQuery('');
+    setSearchResults(null);
+  };
 
   const handleContact = async (referrer: ReferrerProfile, method: ContactMethod) => {
     if (!user) return;
@@ -84,15 +131,18 @@ export function SearchPage() {
       return;
     }
 
-    // Log the contact attempt
     try {
       await logContact(user.uid, referrer.uid, method);
     } catch {
-      // Non-blocking — still open the contact link
+      // Non-blocking
     }
 
     window.open(url, '_blank', 'noopener,noreferrer');
   };
+
+  // Determine which list to display (exclude own profile)
+  const displayList = (searchResults ?? referrers).filter((r) => r.uid !== user?.uid);
+  const isSearchActive = searchResults !== null;
 
   return (
     <FadeIn>
@@ -100,10 +150,11 @@ export function SearchPage() {
         <div>
           <h1 className="text-2xl font-bold">Find Talent Connectors</h1>
           <p className="text-muted-foreground">
-            Search by company name to find people who can help.
+            Browse active connectors or search by company name.
           </p>
         </div>
 
+        {/* Search bar */}
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -123,72 +174,108 @@ export function SearchPage() {
           <Button type="submit" disabled={searching || !query.trim()}>
             {searching ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Search'}
           </Button>
+          {isSearchActive && (
+            <Button type="button" variant="outline" onClick={handleClearSearch}>
+              Clear
+            </Button>
+          )}
         </form>
 
-        {searching && (
+        {/* Loading state */}
+        {(loading || searching) && (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         )}
 
-        {!searching && searched && results.length === 0 && (
+        {/* Empty state */}
+        {!loading && !searching && displayList.length === 0 && (
           <div className="text-center py-12 space-y-3">
             <Building2 className="mx-auto h-12 w-12 text-muted-foreground" />
             <p className="text-muted-foreground">
-              No connectors found for &ldquo;{query}&rdquo;
+              {isSearchActive
+                ? `No connectors found for "${query}"`
+                : 'No active connectors yet. Check back soon!'}
             </p>
           </div>
         )}
 
-        {!searching && results.length > 0 && (
-          <AnimatedList className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {results.map((referrer) => (
-              <Card
-                key={referrer.uid}
-                className="group transition-shadow hover:shadow-lg hover:shadow-primary/5"
-              >
-                <CardContent className="pt-6 space-y-4">
-                  <div>
-                    <h3 className="font-semibold text-lg leading-tight">
-                      {referrer.firstName} {referrer.lastName}
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                      {referrer.companyRole}
-                    </p>
-                    <Badge variant="secondary" className="mt-2 gap-1">
-                      <Building2 className="h-3 w-3" />
-                      {referrer.companyName}
-                    </Badge>
-                  </div>
+        {/* Results grid */}
+        {!loading && !searching && displayList.length > 0 && (
+          <>
+            {isSearchActive && (
+              <p className="text-sm text-muted-foreground">
+                {displayList.length} result{displayList.length !== 1 ? 's' : ''} for &ldquo;{query}
+                &rdquo;
+              </p>
+            )}
 
-                  <div className="space-y-2">
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                      Reach Out
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {referrer.preferredContact.map((method) => {
-                        const config = contactConfig[method];
-                        const Icon = config.icon;
-                        return (
-                          <Button
-                            key={method}
-                            variant="ghost"
-                            size="sm"
-                            className={`gap-1.5 ${config.color}`}
-                            onClick={() => handleContact(referrer, method)}
-                          >
-                            <Icon className="h-3.5 w-3.5" />
-                            {config.label}
-                            <ExternalLink className="h-3 w-3 opacity-50" />
-                          </Button>
-                        );
-                      })}
+            <AnimatedList className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+              {displayList.map((referrer) => (
+                <Card
+                  key={referrer.uid}
+                  className="group flex h-full flex-col transition-shadow hover:shadow-lg hover:shadow-primary/5"
+                >
+                  <CardContent className="flex flex-1 flex-col pt-6 space-y-4">
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-lg leading-tight">
+                        {referrer.firstName} {referrer.lastName}
+                      </h3>
+                      <p className="text-sm text-muted-foreground">{referrer.companyRole}</p>
+                      <Badge variant="secondary" className="mt-2 gap-1">
+                        <Building2 className="h-3 w-3" />
+                        {referrer.companyName}
+                      </Badge>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </AnimatedList>
+
+                    <div className="space-y-2">
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                        Reach Out
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {referrer.preferredContact.map((method) => {
+                          const config = contactConfig[method];
+                          const Icon = config.icon;
+                          return (
+                            <Button
+                              key={method}
+                              variant="ghost"
+                              size="sm"
+                              className={`gap-1.5 ${config.color}`}
+                              onClick={() => handleContact(referrer, method)}
+                            >
+                              <Icon className="h-3.5 w-3.5" />
+                              {config.label}
+                              <ExternalLink className="h-3 w-3 opacity-50" />
+                            </Button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </AnimatedList>
+
+            {/* Pagination - Load More */}
+            {!isSearchActive && hasMore && (
+              <div className="flex justify-center pt-4">
+                <Button
+                  variant="outline"
+                  onClick={loadMore}
+                  disabled={loadingMore}
+                  className="gap-2"
+                >
+                  {loadingMore ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4" />
+                  )}
+                  Load More
+                </Button>
+              </div>
+            )}
+          </>
         )}
       </div>
     </FadeIn>

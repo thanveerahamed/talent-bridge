@@ -4,28 +4,65 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useAuth } from '@/hooks/use-auth';
 import { useRole } from '@/hooks/use-role';
-import { getReferrerProfile, saveReferrerProfile, updateUserRoles } from '@/lib/firestore';
+import {
+  getReferrerProfile,
+  saveReferrerProfile,
+  toggleReferrerVisibility,
+  updateUserRoles,
+} from '@/lib/firestore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { FadeIn } from '@/components/animated/fade-in';
-import { Loader2, Save } from 'lucide-react';
+import { Loader2, Save, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 import type { ContactMethod, ReferrerProfile } from '@/types';
 
-const referrerSchema = z.object({
-  firstName: z.string().min(1, 'First name is required'),
-  lastName: z.string().min(1, 'Last name is required'),
-  email: z.string().email('Enter a valid email'),
-  phone: z.string(),
-  linkedInUrl: z.string(),
-  whatsAppNumber: z.string(),
-  companyName: z.string().min(1, 'Company name is required'),
-  companyRole: z.string().min(1, 'Your role at the company is required'),
-  preferredContact: z.array(z.string()).min(1, 'Select at least one contact method'),
-});
+const referrerSchema = z
+  .object({
+    firstName: z.string().min(1, 'First name is required'),
+    lastName: z.string().min(1, 'Last name is required'),
+    email: z.string().email('Enter a valid email').or(z.literal('')),
+    phone: z.string(),
+    linkedInUrl: z.string(),
+    whatsAppNumber: z.string(),
+    companyName: z.string().min(1, 'Company name is required'),
+    companyRole: z.string().min(1, 'Your role at the company is required'),
+    companyCareerLink: z.string(),
+    preferredContact: z.array(z.string()).min(1, 'Select at least one contact method'),
+  })
+  .superRefine((data, ctx) => {
+    if (data.preferredContact.includes('email') && !data.email) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Email is required when email is a preferred contact method',
+        path: ['email'],
+      });
+    }
+    if (data.preferredContact.includes('phone') && !data.phone) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Phone number is required when phone is a preferred contact method',
+        path: ['phone'],
+      });
+    }
+    if (data.preferredContact.includes('whatsapp') && !data.whatsAppNumber) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'WhatsApp number is required when WhatsApp is a preferred contact method',
+        path: ['whatsAppNumber'],
+      });
+    }
+    if (data.preferredContact.includes('linkedin') && !data.linkedInUrl) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'LinkedIn URL is required when LinkedIn is a preferred contact method',
+        path: ['linkedInUrl'],
+      });
+    }
+  });
 
 type ReferrerForm = z.infer<typeof referrerSchema>;
 
@@ -41,6 +78,9 @@ export function ReferrerProfilePage() {
   const { hasRole } = useRole();
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
+  const [profileVisible, setProfileVisible] = useState(true);
+  const [togglingVisibility, setTogglingVisibility] = useState(false);
+  const [hasExistingProfile, setHasExistingProfile] = useState(false);
 
   const {
     register,
@@ -60,6 +100,7 @@ export function ReferrerProfilePage() {
       whatsAppNumber: '',
       companyName: '',
       companyRole: '',
+      companyCareerLink: '',
       preferredContact: [],
     },
   });
@@ -72,6 +113,8 @@ export function ReferrerProfilePage() {
       try {
         const existing = await getReferrerProfile(user.uid);
         if (existing) {
+          setHasExistingProfile(true);
+          setProfileVisible(existing.visible ?? true);
           reset({
             firstName: existing.firstName,
             lastName: existing.lastName,
@@ -81,6 +124,7 @@ export function ReferrerProfilePage() {
             whatsAppNumber: existing.whatsAppNumber,
             companyName: existing.companyName,
             companyRole: existing.companyRole,
+            companyCareerLink: existing.companyCareerLink ?? '',
             preferredContact: existing.preferredContact,
           });
         } else if (profile) {
@@ -102,7 +146,7 @@ export function ReferrerProfilePage() {
     })();
   }, [user, profile, reset, setValue]);
 
-  const onSubmit = async (data: ProviderForm) => {
+  const onSubmit = async (data: ReferrerForm) => {
     if (!user || !profile) return;
     setLoading(true);
     try {
@@ -117,7 +161,9 @@ export function ReferrerProfilePage() {
         companyName: data.companyName,
         companyNameLower: data.companyName.toLowerCase().trim(),
         companyRole: data.companyRole,
+        companyCareerLink: data.companyCareerLink ?? '',
         preferredContact: data.preferredContact as ContactMethod[],
+        visible: profileVisible,
         status: 'pending',
       };
 
@@ -134,6 +180,23 @@ export function ReferrerProfilePage() {
       toast.error('Failed to save profile. Please try again.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleVisibilityToggle = async () => {
+    if (!user) return;
+    setTogglingVisibility(true);
+    try {
+      const newVisible = !profileVisible;
+      await toggleReferrerVisibility(user.uid, newVisible);
+      setProfileVisible(newVisible);
+      toast.success(
+        newVisible ? 'Profile is now visible to seekers.' : 'Profile is now hidden from seekers.',
+      );
+    } catch {
+      toast.error('Failed to update visibility.');
+    } finally {
+      setTogglingVisibility(false);
     }
   };
 
@@ -162,11 +225,50 @@ export function ReferrerProfilePage() {
               This information will be visible to seekers once approved.
             </CardDescription>
           </CardHeader>
+
+          {hasExistingProfile && (
+            <div className="px-6 pb-4">
+              <div className="flex items-center justify-between rounded-lg border p-4">
+                <div className="flex items-center gap-3">
+                  {profileVisible ? (
+                    <Eye className="h-5 w-5 text-green-600" />
+                  ) : (
+                    <EyeOff className="h-5 w-5 text-muted-foreground" />
+                  )}
+                  <div>
+                    <p className="text-sm font-medium">
+                      {profileVisible ? 'Profile Visible' : 'Profile Hidden'}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {profileVisible
+                        ? 'Seekers can find you in search results.'
+                        : 'Your profile is hidden from search results.'}
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  type="button"
+                  variant={profileVisible ? 'outline' : 'default'}
+                  size="sm"
+                  disabled={togglingVisibility}
+                  onClick={handleVisibilityToggle}
+                >
+                  {togglingVisibility ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : profileVisible ? (
+                    'Hide Profile'
+                  ) : (
+                    'Show Profile'
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
           <CardContent>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="firstName">First Name</Label>
+                  <Label htmlFor="firstName">First Name / Initials</Label>
                   <Input id="firstName" {...register('firstName')} />
                   {errors.firstName && (
                     <p className="text-sm text-destructive">{errors.firstName.message}</p>
@@ -203,35 +305,68 @@ export function ReferrerProfilePage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="email">Contact Email</Label>
+                <Label htmlFor="companyCareerLink">Company Career Page Link</Label>
+                <Input
+                  id="companyCareerLink"
+                  placeholder="https://company.com/careers"
+                  {...register('companyCareerLink')}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="email">
+                  Contact Email
+                  {selectedContact.includes('email') && (
+                    <span className="text-destructive ml-1">*</span>
+                  )}
+                </Label>
                 <Input
                   id="email"
                   type="email"
                   placeholder="you@company.com"
                   {...register('email')}
                 />
-                {errors.email && (
-                  <p className="text-sm text-destructive">{errors.email.message}</p>
-                )}
+                {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="phone">Phone Number</Label>
+                  <Label htmlFor="phone">
+                    Phone Number
+                    {selectedContact.includes('phone') && (
+                      <span className="text-destructive ml-1">*</span>
+                    )}
+                  </Label>
                   <Input id="phone" placeholder="+1 234 567 8900" {...register('phone')} />
+                  {errors.phone && (
+                    <p className="text-sm text-destructive">{errors.phone.message}</p>
+                  )}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="whatsAppNumber">WhatsApp Number</Label>
+                  <Label htmlFor="whatsAppNumber">
+                    WhatsApp Number
+                    {selectedContact.includes('whatsapp') && (
+                      <span className="text-destructive ml-1">*</span>
+                    )}
+                  </Label>
                   <Input
                     id="whatsAppNumber"
                     placeholder="+1 234 567 8900"
                     {...register('whatsAppNumber')}
                   />
+                  {errors.whatsAppNumber && (
+                    <p className="text-sm text-destructive">{errors.whatsAppNumber.message}</p>
+                  )}
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="linkedInUrl">LinkedIn Profile URL</Label>
+                <Label htmlFor="linkedInUrl">
+                  LinkedIn Profile URL
+                  {selectedContact.includes('linkedin') && (
+                    <span className="text-destructive ml-1">*</span>
+                  )}
+                </Label>
                 <Input
                   id="linkedInUrl"
                   placeholder="https://linkedin.com/in/yourprofile"
@@ -246,10 +381,7 @@ export function ReferrerProfilePage() {
                 <Label>Preferred Contact Methods</Label>
                 <div className="flex flex-wrap gap-4">
                   {contactOptions.map((option) => (
-                    <label
-                      key={option.value}
-                      className="flex items-center gap-2 cursor-pointer"
-                    >
+                    <label key={option.value} className="flex items-center gap-2 cursor-pointer">
                       <Checkbox
                         checked={selectedContact.includes(option.value)}
                         onCheckedChange={(checked: boolean) => {

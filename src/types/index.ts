@@ -40,8 +40,11 @@ export interface ReferrerProfile {
   companyName: string;
   companyNameLower: string;
   companyRole: string;
+  companyCareerLink: string;
   preferredContact: ContactMethod[];
+  visible: boolean;
   status: ListingStatus;
+  rejectionReason?: string;
   createdAt: Date;
   updatedAt: Date;
 }

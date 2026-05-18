@@ -15,7 +15,7 @@ export function RoleSwitcher() {
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="inline-flex flex-1 items-center rounded-lg border border-border bg-muted p-1">
+      <div className="inline-flex flex-1 flex-wrap items-center rounded-lg border border-border bg-muted p-1">
         {availableRoles.map((role) => {
           const config = roleConfig[role];
           const Icon = config.icon;
@@ -39,7 +39,12 @@ export function RoleSwitcher() {
         })}
       </div>
       {!hasRole('referrer') && (
-        <Button variant="outline" size="sm" className="gap-1.5 whitespace-nowrap text-xs" onClick={becomeReferrer}>
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-1.5 whitespace-nowrap text-xs"
+          onClick={becomeReferrer}
+        >
           <PlusCircle className="h-3.5 w-3.5" />
           Become a Referrer
         </Button>

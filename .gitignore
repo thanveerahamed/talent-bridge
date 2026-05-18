@@ -29,3 +29,7 @@ scripts/service-account.json
 .env
 ./scripts/seed-admin.ts
 functions/lib/*
+
+# Firebase emulator persisted data
+.emulator-data
+

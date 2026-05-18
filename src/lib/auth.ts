@@ -3,10 +3,11 @@ import {
   signInWithEmailAndPassword,
   signOut as firebaseSignOut,
   sendEmailVerification,
+  deleteUser as firebaseDeleteUser,
   type ActionCodeSettings,
   type User,
 } from 'firebase/auth';
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from './firebase';
 import type { UserRole } from '@/types';
 
@@ -59,4 +60,28 @@ export async function resendVerificationEmail(user: User) {
   }
 
   await sendEmailVerification(currentUser, getVerificationActionSettings());
+}
+
+export async function deleteAccount() {
+  const currentUser = auth.currentUser;
+  if (!currentUser) {
+    throw new Error('No authenticated user found.');
+  }
+
+  const uid = currentUser.uid;
+
+  // Delete Firestore documents (ignore if they don't exist)
+  try {
+    await deleteDoc(doc(db, 'users', uid));
+  } catch {
+    /* may not exist */
+  }
+  try {
+    await deleteDoc(doc(db, 'referrers', uid));
+  } catch {
+    /* may not exist */
+  }
+
+  // Delete Firebase Auth account
+  await firebaseDeleteUser(currentUser);
 }

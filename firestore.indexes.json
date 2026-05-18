@@ -5,7 +5,17 @@
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "visible", "order": "ASCENDING" },
         { "fieldPath": "companyNameLower", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "referrers",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "visible", "order": "ASCENDING" },
+        { "fieldPath": "companyNameLower", "order": "DESCENDING" }
       ]
     }
   ],

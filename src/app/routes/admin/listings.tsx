@@ -1,14 +1,20 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/use-auth';
-import {
-  getAllReferrers,
-  updateReferrerStatus,
-  logAdminAction,
-} from '@/lib/firestore';
+import { getAllReferrers, updateReferrerStatus, logAdminAction } from '@/lib/firestore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { FadeIn } from '@/components/animated/fade-in';
 import { AnimatedList } from '@/components/animated/animated-list';
 import { Loader2, Check, X, Building2 } from 'lucide-react';
@@ -27,6 +33,8 @@ export function AdminListingsPage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>('all');
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [rejectTarget, setRejectTarget] = useState<ReferrerProfile | null>(null);
+  const [rejectReason, setRejectReason] = useState('');
 
   const loadReferrers = async () => {
     setLoading(true);
@@ -42,19 +50,37 @@ export function AdminListingsPage() {
   };
 
   useEffect(() => {
-    loadReferrers();
+    let cancelled = false;
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const status = filter === 'all' ? undefined : (filter as ListingStatus);
+        const data = await getAllReferrers(status);
+        if (!cancelled) setReferrers(data);
+      } catch {
+        if (!cancelled) toast.error('Failed to load listings.');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    fetchData();
+    return () => { cancelled = true; };
   }, [filter]);
 
-  const handleStatusChange = async (referrer: ReferrerProfile, newStatus: ListingStatus) => {
+  const handleStatusChange = async (
+    referrer: ReferrerProfile,
+    newStatus: ListingStatus,
+    reason?: string,
+  ) => {
     if (!user) return;
     setActionLoading(referrer.uid);
     try {
-      await updateReferrerStatus(referrer.uid, newStatus);
+      await updateReferrerStatus(referrer.uid, newStatus, reason);
       await logAdminAction(
         user.uid,
         newStatus === 'approved' ? 'approve_listing' : 'reject_listing',
         referrer.uid,
-        { companyName: referrer.companyName },
+        { companyName: referrer.companyName, ...(reason ? { reason } : {}) },
       );
       toast.success(`Listing ${newStatus}.`);
       await loadReferrers();
@@ -63,6 +89,22 @@ export function AdminListingsPage() {
     } finally {
       setActionLoading(null);
     }
+  };
+
+  const openRejectDialog = (referrer: ReferrerProfile) => {
+    setRejectTarget(referrer);
+    setRejectReason('');
+  };
+
+  const confirmReject = async () => {
+    if (!rejectTarget) return;
+    if (!rejectReason.trim()) {
+      toast.error('Please provide a reason for rejection.');
+      return;
+    }
+    await handleStatusChange(rejectTarget, 'rejected', rejectReason.trim());
+    setRejectTarget(null);
+    setRejectReason('');
   };
 
   return (
@@ -133,7 +175,7 @@ export function AdminListingsPage() {
                           <Button
                             size="sm"
                             variant="destructive"
-                            onClick={() => handleStatusChange(p, 'rejected')}
+                            onClick={() => openRejectDialog(p)}
                             disabled={actionLoading === p.uid}
                           >
                             <X className="mr-1 h-3 w-3" />
@@ -142,22 +184,29 @@ export function AdminListingsPage() {
                         </div>
                       )}
                       {p.status === 'rejected' && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleStatusChange(p, 'approved')}
-                          disabled={actionLoading === p.uid}
-                        >
-                          <Check className="mr-1 h-3 w-3" />
-                          Approve
-                        </Button>
+                        <div className="space-y-2">
+                          {p.rejectionReason && (
+                            <p className="text-xs text-red-600 bg-red-500/10 rounded p-2">
+                              Reason: {p.rejectionReason}
+                            </p>
+                          )}
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleStatusChange(p, 'approved')}
+                            disabled={actionLoading === p.uid}
+                          >
+                            <Check className="mr-1 h-3 w-3" />
+                            Approve
+                          </Button>
+                        </div>
                       )}
                       {p.status === 'approved' && (
                         <Button
                           size="sm"
                           variant="outline"
                           className="text-destructive"
-                          onClick={() => handleStatusChange(p, 'rejected')}
+                          onClick={() => openRejectDialog(p)}
                           disabled={actionLoading === p.uid}
                         >
                           <X className="mr-1 h-3 w-3" />
@@ -172,6 +221,49 @@ export function AdminListingsPage() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Rejection Reason Dialog */}
+      <Dialog open={!!rejectTarget} onOpenChange={(open) => !open && setRejectTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reject / Revoke Listing</DialogTitle>
+            <DialogDescription>
+              Provide a reason for rejecting{' '}
+              <span className="font-medium text-foreground">
+                {rejectTarget?.firstName} {rejectTarget?.lastName}
+              </span>
+              &apos;s listing. This will be shown to the referrer.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="rejectReason">Reason</Label>
+            <Textarea
+              id="rejectReason"
+              placeholder="e.g. Incomplete profile, missing contact details..."
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              rows={3}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRejectTarget(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmReject}
+              disabled={!rejectReason.trim() || actionLoading === rejectTarget?.uid}
+            >
+              {actionLoading === rejectTarget?.uid ? (
+                <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+              ) : (
+                <X className="mr-1 h-3 w-3" />
+              )}
+              Confirm Rejection
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </FadeIn>
   );
 }
