@@ -29,7 +29,22 @@ export function AdminUsersPage() {
   };
 
   useEffect(() => {
-    loadUsers();
+    let cancelled = false;
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const data = await getAllUsers();
+        if (!cancelled) setUsers(data);
+      } catch {
+        if (!cancelled) toast.error('Failed to load users.');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    fetchData();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const handlePromoteAdmin = async (targetUser: UserProfile) => {
@@ -85,9 +100,7 @@ export function AdminUsersPage() {
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold">Manage Users</h1>
-          <p className="text-muted-foreground">
-            View all registered users and manage admin roles.
-          </p>
+          <p className="text-muted-foreground">View all registered users and manage admin roles.</p>
         </div>
 
         {users.length === 0 ? (
@@ -124,7 +137,7 @@ export function AdminUsersPage() {
                     </span>
                   </div>
                   <div className="flex gap-2">
-                    {!u.roles.includes('admin') && u.emailVerified && (
+                    {!u.roles.includes('admin') && (
                       <Button
                         size="sm"
                         variant="outline"

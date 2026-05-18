@@ -9,10 +9,19 @@
   },
   "scripts": {
     "dev": "vite --port 4011 --strictPort",
+    "dev:emulators": "firebase emulators:start --project im-nl-talent-bridge --import=.emulator-data --export-on-exit=.emulator-data",
     "build": "tsc -b && vite build",
+    "deploy": "pnpm build && firebase deploy",
+    "deploy:hosting": "pnpm build && firebase deploy --only hosting",
+    "deploy:functions": "firebase deploy --only functions",
+    "deploy:rules": "firebase deploy --only firestore:rules,firestore:indexes",
     "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "preview": "vite preview",
-    "verify:user": "tsx scripts/verify-user.ts"
+    "verify:user": "tsx scripts/verify-user.ts",
+    "seed:admin": "tsx scripts/seed-admin.ts",
+    "seed:referrers": "tsx scripts/seed-referrers.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",
@@ -50,6 +59,7 @@
     "eslint-plugin-react-refresh": "^0.5.2",
     "firebase-admin": "^13.10.0",
     "globals": "^17.6.0",
+    "prettier": "^3.8.3",
     "tsx": "^4.22.0",
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.59.2",

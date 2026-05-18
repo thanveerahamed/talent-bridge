@@ -7,6 +7,10 @@
  *   2. Save it as `scripts/service-account.json`
  *   3. Run: npx tsx scripts/seed-admin.ts your@email.com
  *   4. Delete this script and the service account key after use.
+ *
+ * Emulator mode:
+ *   Run against local emulators (no service account needed):
+ *   npx tsx scripts/seed-admin.ts your@email.com --emulator
  */
 
 import { initializeApp, cert } from 'firebase-admin/app';
@@ -18,23 +22,37 @@ import { fileURLToPath } from 'node:url';
 
 const email = process.argv[2];
 if (!email) {
-  console.error('Usage: npx tsx scripts/seed-admin.ts <email>');
+  console.error('Usage: npx tsx scripts/seed-admin.ts <email> [--emulator] [--only]');
   process.exit(1);
 }
+
+const useEmulator = process.argv.includes('--emulator');
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const serviceAccountPath = resolve(__dirname, 'service-account.json');
-let serviceAccount: Record<string, string>;
-try {
-  serviceAccount = JSON.parse(readFileSync(serviceAccountPath, 'utf-8'));
-} catch {
-  console.error(`Service account key not found at: ${serviceAccountPath}`);
-  console.error('Download it from Firebase Console → Project Settings → Service accounts');
-  process.exit(1);
+
+if (useEmulator) {
+  // Point Firebase Admin SDK to the local emulators
+  process.env.FIRESTORE_EMULATOR_HOST = '127.0.0.1:8080';
+  process.env.FIREBASE_AUTH_EMULATOR_HOST = '127.0.0.1:9099';
+
+  initializeApp({ projectId: 'im-nl-talent-bridge' });
+  console.log('🔧 Running against local emulators');
+} else {
+  const serviceAccountPath = resolve(__dirname, 'service-account.json');
+  let serviceAccount: Record<string, string>;
+  try {
+    serviceAccount = JSON.parse(readFileSync(serviceAccountPath, 'utf-8'));
+  } catch {
+    console.error(`Service account key not found at: ${serviceAccountPath}`);
+    console.error('Download it from Firebase Console → Project Settings → Service accounts');
+    console.error('Or use --emulator flag to run against local emulators.');
+    process.exit(1);
+  }
+
+  initializeApp({ credential: cert(serviceAccount) });
 }
 
-initializeApp({ credential: cert(serviceAccount) });
 const db = getFirestore();
 const authAdmin = getAuth();
 
@@ -91,8 +109,10 @@ async function seedAdmin() {
     console.log(`   Roles: [${newRoles.join(', ')}]`);
   }
 
-  console.log('');
-  console.log('⚠️  Remember to delete service-account.json when done!');
+  if (!useEmulator) {
+    console.log('');
+    console.log('⚠️  Remember to delete service-account.json when done!');
+  }
 }
 
 try {

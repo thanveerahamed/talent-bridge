@@ -4,7 +4,15 @@ import { getReferrerProfile } from '@/lib/firestore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { FadeIn } from '@/components/animated/fade-in';
-import { Loader2, Pencil, Building2, Mail, Phone, MessageCircle, Link as LinkIcon } from 'lucide-react';
+import {
+  Loader2,
+  Pencil,
+  Building2,
+  Mail,
+  Phone,
+  MessageCircle,
+  Link as LinkIcon,
+} from 'lucide-react';
 import { Link } from 'react-router';
 import type { ReferrerProfile, ContactMethod, ListingStatus } from '@/types';
 
@@ -49,8 +57,13 @@ export function MyListingPage() {
         <div className="text-center py-20 space-y-4">
           <Building2 className="mx-auto h-12 w-12 text-muted-foreground" />
           <h2 className="text-xl font-semibold">No listing yet</h2>
-          <p className="text-muted-foreground">Create your Talent Connector profile to get started.</p>
-          <Link to="/referrer/profile" className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/80">
+          <p className="text-muted-foreground">
+            Create your Talent Connector profile to get started.
+          </p>
+          <Link
+            to="/referrer/profile"
+            className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/80"
+          >
             Create Profile
           </Link>
         </div>
@@ -66,7 +79,10 @@ export function MyListingPage() {
             <h1 className="text-2xl font-bold">My Listing</h1>
             <p className="text-muted-foreground">Preview how seekers see your contact card.</p>
           </div>
-          <Link to="/referrer/profile" className="inline-flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm font-medium hover:bg-muted">
+          <Link
+            to="/referrer/profile"
+            className="inline-flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm font-medium hover:bg-muted"
+          >
             <Pencil className="h-4 w-4" />
             Edit
           </Link>
@@ -89,7 +105,9 @@ export function MyListingPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <p className="text-sm font-medium text-muted-foreground mb-2">Preferred Contact Methods</p>
+              <p className="text-sm font-medium text-muted-foreground mb-2">
+                Preferred Contact Methods
+              </p>
               <div className="flex flex-wrap gap-2">
                 {referrer.preferredContact.map((method) => {
                   const Icon = contactIcons[method];
@@ -105,13 +123,16 @@ export function MyListingPage() {
 
             {referrer.status === 'pending' && (
               <p className="text-sm text-yellow-600 bg-yellow-500/10 rounded-lg p-3">
-                Your listing is under review. It will be visible to seekers once approved by an admin.
+                Your listing is under review. It will be visible to seekers once approved by an
+                admin.
               </p>
             )}
             {referrer.status === 'rejected' && (
-              <p className="text-sm text-red-600 bg-red-500/10 rounded-lg p-3">
-                Your listing was not approved. Please update your profile and resubmit.
-              </p>
+              <div className="text-sm text-red-600 bg-red-500/10 rounded-lg p-3 space-y-1">
+                <p className="font-medium">Your listing was not approved.</p>
+                {referrer.rejectionReason && <p>Reason: {referrer.rejectionReason}</p>}
+                <p className="text-red-500">Please update your profile and resubmit.</p>
+              </div>
             )}
           </CardContent>
         </Card>

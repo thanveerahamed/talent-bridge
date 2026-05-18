@@ -1,73 +1,92 @@
-# React + TypeScript + Vite
+# TalentBridge
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A platform that connects job seekers with talent connectors (referrers) who can help them get noticed at companies. Built as an open-source project.
 
-Currently, two official plugins are available:
+## What It Does
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **Seekers** browse and search for people at companies they're interested in, then reach out via their preferred contact method.
+- **Referrers** create a profile listing their company and how they'd like to be contacted. They can hide/show their profile at any time.
+- **Admins** review and approve referrer listings, manage users, and monitor platform activity.
 
-## React Compiler
+## Tech Stack
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **Frontend:** React 19, TypeScript, Vite, Tailwind CSS, Framer Motion
+- **Backend:** Firebase (Auth, Firestore, Functions)
+- **State:** Zustand
+- **Forms:** React Hook Form + Zod
+- **UI:** shadcn/ui components
 
-## Expanding the ESLint configuration
+## Getting Started
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### Prerequisites
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+- Node.js 18+
+- pnpm
+- Firebase CLI (`npm install -g firebase-tools`)
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+### Setup
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+# Install dependencies
+pnpm install
+
+# Set up environment variables
+cp .env.example .env.local
+# Fill in your Firebase config values
+
+# Start Firebase emulators (Firestore + Auth)
+pnpm dev:emulators
+
+# In another terminal, start the dev server
+pnpm dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### Seed Data
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+```bash
+# Seed your first admin user (emulators must be running)
+pnpm seed:admin your@email.com --emulator
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+# Seed 50 dummy referrer profiles for testing
+pnpm seed:referrers
 ```
+
+## Scripts
+
+| Command                   | Description                                    |
+| ------------------------- | ---------------------------------------------- |
+| `pnpm dev`                | Start Vite dev server on port 4011             |
+| `pnpm dev:emulators`      | Start Firebase emulators with data persistence |
+| `pnpm build`              | Type-check and build for production            |
+| `pnpm seed:admin <email>` | Promote a user to admin                        |
+| `pnpm seed:referrers`     | Seed 50 test referrer profiles                 |
+
+## Project Structure
+
+```
+src/
+├── app/
+│   ├── layouts/        # App shell, auth layout
+│   └── routes/         # Page components (seeker, referrer, admin)
+├── components/         # Shared UI components
+├── hooks/              # Custom React hooks
+├── lib/                # Firebase config, Firestore helpers, auth
+├── stores/             # Zustand stores
+└── types/              # TypeScript type definitions
+```
+
+## Features
+
+- 🔍 Browse & search referrers by company name
+- 📄 Referrer profiles with preferred contact methods
+- 👁️ Profile visibility toggle
+- 📋 Pagination on search results
+- 🛡️ Admin approval workflow with rejection reasons
+- 🎨 Dark/light mode
+- 📱 Fully responsive (mobile-first)
+- 🗑️ Account deletion (removes all user data)
+- 🔒 Privacy-first — no tracking, no ads, no data selling
+
+## License
+
+See [LICENSE](./LICENSE) for details.

@@ -97,7 +97,8 @@ export function VerifyEmailPage() {
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-center text-sm text-muted-foreground">
-              Click the link in the email to verify your account, then use the button below to continue.
+              Click the link in the email to verify your account, then use the button below to
+              continue.
             </p>
 
             <div className="flex flex-col gap-2">

@@ -1,8 +1,17 @@
-import { Outlet, Navigate, NavLink } from 'react-router';
+import { Outlet, Navigate, NavLink, useNavigate } from 'react-router';
 import { useAuth } from '@/hooks/use-auth';
 import { useRole } from '@/hooks/use-role';
+import { useTheme } from 'next-themes';
 import { RoleSwitcher } from '@/components/role-switcher';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { DeleteAccountButton } from '@/components/delete-account-button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import {
   Search,
   Briefcase,
@@ -12,6 +21,10 @@ import {
   UserCircle,
   LogOut,
   Loader2,
+  Menu,
+  Sun,
+  Moon,
+  ShieldCheck,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { signOutUser } from '@/lib/auth';
@@ -20,9 +33,7 @@ import { cn } from '@/lib/utils';
 import type { UserRole } from '@/types';
 
 const navItems: Record<UserRole, { to: string; label: string; icon: typeof Search }[]> = {
-  seeker: [
-    { to: '/search', label: 'Find Connectors', icon: Search },
-  ],
+  seeker: [{ to: '/search', label: 'Find Connectors', icon: Search }],
   referrer: [
     { to: '/referrer/profile', label: 'My Profile', icon: UserCircle },
     { to: '/referrer/listing', label: 'My Listing', icon: FileText },
@@ -35,8 +46,10 @@ const navItems: Record<UserRole, { to: string; label: string; icon: typeof Searc
 };
 
 export function AppLayout() {
-  const { isAuthenticated, isEmailVerified, loading } = useAuth();
+  const { isAuthenticated, loading } = useAuth();
   const { activeRole } = useRole();
+  const { theme, setTheme } = useTheme();
+  const navigate = useNavigate();
 
   if (loading) {
     return (
@@ -60,7 +73,7 @@ export function AppLayout() {
   return (
     <div className="flex min-h-svh flex-col lg:flex-row">
       {/* Desktop Sidebar */}
-      <aside className="hidden lg:flex lg:w-64 lg:flex-col lg:border-r lg:border-border bg-card">
+      <aside className="hidden lg:flex lg:w-64 lg:flex-col lg:border-r lg:border-border bg-card lg:sticky lg:top-0 lg:h-svh">
         <div className="flex h-16 items-center gap-2 px-6 border-b border-border">
           <Briefcase className="h-6 w-6 text-primary" />
           <span className="text-lg font-semibold">TalentBridge</span>
@@ -70,7 +83,7 @@ export function AppLayout() {
           <RoleSwitcher />
         </div>
 
-        <nav className="flex-1 px-3 space-y-1">
+        <nav className="flex-1 overflow-y-auto px-3 space-y-1">
           {currentNav.map((item) => {
             const Icon = item.icon;
             return (
@@ -93,11 +106,37 @@ export function AppLayout() {
           })}
         </nav>
 
-        <div className="border-t border-border p-4 flex items-center gap-2">
-          <ThemeToggle />
-          <Button variant="ghost" size="icon" onClick={signOutUser} aria-label="Sign out">
-            <LogOut className="h-4 w-4" />
+        <div className="border-t border-border p-3 space-y-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full justify-start gap-3 px-3 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground"
+            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+          >
+            {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
           </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full justify-start gap-3 px-3 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground"
+            onClick={() => navigate('/privacy')}
+          >
+            <ShieldCheck className="h-4 w-4" />
+            Privacy & Data
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full justify-start gap-3 px-3 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground"
+            onClick={signOutUser}
+          >
+            <LogOut className="h-4 w-4" />
+            Sign Out
+          </Button>
+          <div className="border-t border-border pt-1 mt-1">
+            <DeleteAccountButton variant="full" />
+          </div>
         </div>
       </aside>
 
@@ -109,9 +148,23 @@ export function AppLayout() {
         </div>
         <div className="flex items-center gap-1">
           <ThemeToggle />
-          <Button variant="ghost" size="icon" onClick={signOutUser} aria-label="Sign out">
-            <LogOut className="h-4 w-4" />
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger className="inline-flex items-center justify-center rounded-lg p-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground outline-none">
+              <Menu className="h-5 w-5" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" side="bottom" sideOffset={8}>
+              <DropdownMenuItem onClick={() => navigate('/privacy')}>
+                <ShieldCheck className="mr-2 h-4 w-4" />
+                Privacy & Data
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={signOutUser}>
+                <LogOut className="mr-2 h-4 w-4" />
+                Sign Out
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DeleteAccountButton variant="menuItem" />
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </header>
 
@@ -138,9 +191,7 @@ export function AppLayout() {
               className={({ isActive }) =>
                 cn(
                   'flex flex-1 flex-col items-center gap-1 py-3 text-xs font-medium transition-colors',
-                  isActive
-                    ? 'text-primary'
-                    : 'text-muted-foreground',
+                  isActive ? 'text-primary' : 'text-muted-foreground',
                 )
               }
             >
