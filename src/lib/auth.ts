@@ -15,8 +15,9 @@ function getVerificationActionSettings(): ActionCodeSettings {
   const origin = globalThis.location?.origin ?? 'http://localhost:4011';
 
   return {
-    // Return users to the verification screen in this app after clicking the email link.
-    url: `${origin}/verify-email`,
+    // After Firebase processes the action, redirect users back to our app.
+    url: `${origin}/dashboard`,
+    handleCodeInApp: true,
   };
 }
 
@@ -38,8 +39,8 @@ export async function signUp(email: string, password: string, displayName: strin
     updatedAt: serverTimestamp(),
   });
 
-  // Send verification email (disabled for now)
-  // await sendEmailVerification(user, getVerificationActionSettings());
+  // Send verification email
+  await sendEmailVerification(user, getVerificationActionSettings());
 
   return user;
 }

@@ -5,6 +5,9 @@ import { AppLayout } from './layouts/app-layout';
 import { LoginPage } from './routes/login';
 import { RegisterPage } from './routes/register';
 import { VerifyEmailPage } from './routes/verify-email';
+import { AuthActionPage } from './routes/auth-action';
+import { ForgotPasswordPage } from './routes/forgot-password';
+import { ResetPasswordPage } from './routes/reset-password';
 import { DashboardPage } from './routes/dashboard';
 import { SearchPage } from './routes/seeker/search';
 import { ReferrerProfilePage } from './routes/referrer/profile-form';
@@ -18,17 +21,24 @@ export const router = createBrowserRouter([
   {
     element: <RootLayout />,
     children: [
-      // Auth routes (login, register)
+      // Auth routes (login, register, forgot password)
       {
         element: <AuthLayout />,
         children: [
           { path: '/login', element: <LoginPage /> },
           { path: '/register', element: <RegisterPage /> },
+          { path: '/forgot-password', element: <ForgotPasswordPage /> },
         ],
       },
 
       // Email verification (standalone, no app shell)
       { path: '/verify-email', element: <VerifyEmailPage /> },
+
+      // Custom Firebase email action handler (replaces default Firebase page)
+      { path: '/auth/action', element: <AuthActionPage /> },
+
+      // Reset password (from email link)
+      { path: '/reset-password', element: <ResetPasswordPage /> },
 
       // Protected app routes
       {
