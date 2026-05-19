@@ -138,7 +138,7 @@ export function AdminListingsPage() {
             ) : (
               <AnimatedList className="space-y-3">
                 {referrers.map((p) => (
-                  <Card key={p.uid}>
+                  <Card key={p.uid} className="overflow-hidden">
                     <CardHeader className="pb-3">
                       <div className="flex items-start justify-between gap-4">
                         <div className="min-w-0">

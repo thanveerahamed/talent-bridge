@@ -214,7 +214,7 @@ export function SearchPage() {
               {displayList.map((referrer) => (
                 <Card
                   key={referrer.uid}
-                  className="group flex h-full flex-col transition-shadow hover:shadow-lg hover:shadow-primary/5"
+                  className="group flex h-full flex-col overflow-hidden transition-shadow hover:shadow-lg hover:shadow-primary/5"
                 >
                   <CardContent className="flex flex-1 flex-col pt-6 space-y-4">
                     <div className="flex-1">

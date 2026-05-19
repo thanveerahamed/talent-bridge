@@ -160,8 +160,15 @@ export function VerifyEmailPage() {
             <p className="text-xs text-muted-foreground text-center">
               Want to use a different account?
             </p>
-            <div className="flex w-full gap-2">
-              <Button variant="ghost" size="sm" className="flex-1" onClick={signOutUser}>
+            <div className="grid w-full grid-cols-2 gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={async () => {
+                  await signOutUser();
+                  navigate('/login', { replace: true });
+                }}
+              >
                 <LogOut className="mr-2 h-4 w-4" />
                 Sign Out
               </Button>
