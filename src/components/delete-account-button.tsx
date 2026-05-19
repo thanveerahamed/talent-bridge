@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Loader2, Trash2 } from 'lucide-react';
+import { useNavigate } from 'react-router';
 import { deleteAccount } from '@/lib/auth';
 import { toast } from 'sonner';
 
@@ -20,6 +21,7 @@ interface DeleteAccountButtonProps {
 }
 
 export function DeleteAccountButton({ variant = 'icon' }: DeleteAccountButtonProps) {
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [confirmation, setConfirmation] = useState('');
   const [deleting, setDeleting] = useState(false);
@@ -30,6 +32,7 @@ export function DeleteAccountButton({ variant = 'icon' }: DeleteAccountButtonPro
     try {
       await deleteAccount();
       toast.success('Account deleted successfully.');
+      navigate('/login', { replace: true });
     } catch {
       toast.error('Failed to delete account. You may need to sign in again.');
     } finally {
@@ -46,7 +49,7 @@ export function DeleteAccountButton({ variant = 'icon' }: DeleteAccountButtonPro
           <Button
             variant="ghost"
             size="sm"
-            className="w-full justify-start gap-2 text-destructive hover:text-destructive"
+            className="w-full gap-2 text-destructive hover:text-destructive"
             onClick={() => setOpen(true)}
           >
             <Trash2 className="h-4 w-4" />

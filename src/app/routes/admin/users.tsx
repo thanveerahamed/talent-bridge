@@ -111,14 +111,14 @@ export function AdminUsersPage() {
         ) : (
           <AnimatedList className="space-y-3">
             {users.map((u) => (
-              <Card key={u.uid}>
+              <Card key={u.uid} className="overflow-hidden">
                 <CardHeader className="pb-2">
                   <div className="flex items-start justify-between gap-4">
                     <div className="min-w-0">
                       <CardTitle className="text-base">{u.displayName}</CardTitle>
                       <p className="text-sm text-muted-foreground truncate">{u.email}</p>
                     </div>
-                    <div className="flex gap-1 flex-shrink-0">
+                    <div className="flex flex-wrap gap-1 flex-shrink-0">
                       {u.roles.map((role) => (
                         <Badge key={role} variant="secondary" className="text-xs">
                           {role}

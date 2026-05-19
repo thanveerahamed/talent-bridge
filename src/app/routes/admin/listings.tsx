@@ -118,7 +118,7 @@ export function AdminListingsPage() {
         </div>
 
         <Tabs value={filter} onValueChange={setFilter}>
-          <TabsList>
+          <TabsList className="w-full flex-wrap h-auto gap-1 p-1">
             <TabsTrigger value="all">All</TabsTrigger>
             <TabsTrigger value="pending">Pending</TabsTrigger>
             <TabsTrigger value="approved">Approved</TabsTrigger>
@@ -136,20 +136,20 @@ export function AdminListingsPage() {
                 <p className="mt-2 text-muted-foreground">No listings found.</p>
               </div>
             ) : (
-              <AnimatedList className="space-y-3">
+              <AnimatedList key={filter} className="space-y-3">
                 {referrers.map((p) => (
-                  <Card key={p.uid}>
+                  <Card key={p.uid} className="overflow-hidden">
                     <CardHeader className="pb-3">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="min-w-0">
-                          <CardTitle className="text-base truncate">
+                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <CardTitle className="text-base break-words">
                             {p.firstName} {p.lastName}
                           </CardTitle>
-                          <p className="text-sm text-muted-foreground truncate">
+                          <p className="text-sm text-muted-foreground break-words">
                             {p.companyRole} at {p.companyName}
                           </p>
                         </div>
-                        <Badge className={statusStyles[p.status]}>{p.status}</Badge>
+                        <Badge className={`shrink-0 ${statusStyles[p.status]}`}>{p.status}</Badge>
                       </div>
                     </CardHeader>
                     <CardContent className="pt-0">
@@ -161,7 +161,7 @@ export function AdminListingsPage() {
                         ))}
                       </div>
                       {p.status === 'pending' && (
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap gap-2">
                           <Button
                             size="sm"
                             onClick={() => handleStatusChange(p, 'approved')}

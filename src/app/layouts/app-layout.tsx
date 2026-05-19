@@ -25,6 +25,7 @@ import {
   Sun,
   Moon,
   ShieldCheck,
+  Settings,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { signOutUser } from '@/lib/auth';
@@ -42,11 +43,12 @@ const navItems: Record<UserRole, { to: string; label: string; icon: typeof Searc
     { to: '/admin/listings', label: 'Listings', icon: FileText },
     { to: '/admin/users', label: 'Users', icon: Users },
     { to: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
+    { to: '/admin/settings', label: 'Settings', icon: Settings },
   ],
 };
 
 export function AppLayout() {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, isEmailVerified, loading } = useAuth();
   const { activeRole } = useRole();
   const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
@@ -63,10 +65,9 @@ export function AppLayout() {
     return <Navigate to="/login" replace />;
   }
 
-  // Email verification gate (disabled for now)
-  // if (!isEmailVerified) {
-  //   return <Navigate to="/verify-email" replace />;
-  // }
+  if (!isEmailVerified) {
+    return <Navigate to="/verify-email" replace />;
+  }
 
   const currentNav = navItems[activeRole] ?? navItems.seeker;
 

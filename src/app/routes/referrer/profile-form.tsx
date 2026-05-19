@@ -9,6 +9,7 @@ import {
   saveReferrerProfile,
   toggleReferrerVisibility,
   updateUserRoles,
+  getFeatureFlags,
 } from '@/lib/firestore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -150,6 +151,14 @@ export function ReferrerProfilePage() {
     if (!user || !profile) return;
     setLoading(true);
     try {
+      const existingProfile = await getReferrerProfile(user.uid);
+      const flags = await getFeatureFlags();
+      const status = existingProfile
+        ? existingProfile.status
+        : flags.autoApproveListings
+          ? 'approved'
+          : 'pending';
+
       const referrerData: Omit<ReferrerProfile, 'createdAt' | 'updatedAt'> = {
         uid: user.uid,
         firstName: data.firstName,
@@ -160,11 +169,15 @@ export function ReferrerProfilePage() {
         whatsAppNumber: data.whatsAppNumber ?? '',
         companyName: data.companyName,
         companyNameLower: data.companyName.toLowerCase().trim(),
+        companySearchTerms: data.companyName
+          .split(',')
+          .map((s) => s.trim().toLowerCase())
+          .filter(Boolean),
         companyRole: data.companyRole,
         companyCareerLink: data.companyCareerLink ?? '',
         preferredContact: data.preferredContact as ContactMethod[],
         visible: profileVisible,
-        status: 'pending',
+        status,
       };
 
       await saveReferrerProfile(referrerData);
@@ -286,7 +299,15 @@ export function ReferrerProfilePage() {
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="companyName">Company Name</Label>
-                  <Input id="companyName" placeholder="Acme Corp" {...register('companyName')} />
+                  <Input
+                    id="companyName"
+                    placeholder="e.g. Google, Alphabet Inc."
+                    {...register('companyName')}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Comma-separated if you want to include abbreviations or full name (e.g. "IBM,
+                    International Business Machines")
+                  </p>
                   {errors.companyName && (
                     <p className="text-sm text-destructive">{errors.companyName.message}</p>
                   )}

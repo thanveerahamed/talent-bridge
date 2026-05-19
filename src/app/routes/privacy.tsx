@@ -1,14 +1,31 @@
 import { FadeIn } from '@/components/animated/fade-in';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ExternalLink, Shield, Database, Eye, Trash2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { ExternalLink, Shield, Database, Eye, Trash2, ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router';
+import { useAuth } from '@/hooks/use-auth';
 
 const GITHUB_REPO = 'https://github.com/thanveerahamed/talent-bridge';
 
 export function PrivacyPage() {
+  const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
+
   return (
     <FadeIn>
-      <div className="space-y-6">
+      <div className="max-w-3xl mx-auto px-4 py-8 space-y-6">
+        <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate(isAuthenticated ? '/dashboard' : '/login')}
+          >
+            <ArrowLeft className="mr-1 h-4 w-4" />
+            {isAuthenticated ? 'Back to Dashboard' : 'Back to Login'}
+          </Button>
+        </div>
+
         <div>
           <h1 className="text-2xl font-bold">Privacy & Data</h1>
           <p className="text-muted-foreground">How your data is used, stored, and protected.</p>

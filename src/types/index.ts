@@ -39,6 +39,7 @@ export interface ReferrerProfile {
   whatsAppNumber: string;
   companyName: string;
   companyNameLower: string;
+  companySearchTerms?: string[];
   companyRole: string;
   companyCareerLink: string;
   preferredContact: ContactMethod[];
@@ -66,4 +67,9 @@ export interface AdminLog {
   targetUid: string;
   metadata?: Record<string, string>;
   createdAt: Date;
+}
+
+// Feature flags stored in settings/featureFlags
+export interface FeatureFlags {
+  autoApproveListings: boolean;
 }

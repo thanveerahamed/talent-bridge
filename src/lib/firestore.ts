@@ -24,6 +24,7 @@ import type {
   ListingStatus,
   ContactMethod,
   AdminAction,
+  FeatureFlags,
 } from '@/types';
 
 // ─── Users ──────────────────────────────────────────
@@ -90,7 +91,8 @@ export async function searchReferrersByCompany(searchTerm: string): Promise<Refe
   const lower = searchTerm.toLowerCase().trim();
   if (!lower) return [];
 
-  const q = query(
+  // Search by prefix on companyNameLower
+  const prefixQuery = query(
     collection(db, 'referrers'),
     where('status', '==', 'approved'),
     where('visible', '==', true),
@@ -100,8 +102,29 @@ export async function searchReferrersByCompany(searchTerm: string): Promise<Refe
     limit(50),
   );
 
-  const snap = await getDocs(q);
-  return snap.docs.map((d) => d.data() as ReferrerProfile);
+  // Search by array-contains on companySearchTerms (exact match on individual term)
+  const arrayQuery = query(
+    collection(db, 'referrers'),
+    where('status', '==', 'approved'),
+    where('visible', '==', true),
+    where('companySearchTerms', 'array-contains', lower),
+    limit(50),
+  );
+
+  const [prefixSnap, arraySnap] = await Promise.all([getDocs(prefixQuery), getDocs(arrayQuery)]);
+
+  // Merge and deduplicate results
+  const seen = new Set<string>();
+  const results: ReferrerProfile[] = [];
+
+  for (const d of [...prefixSnap.docs, ...arraySnap.docs]) {
+    if (!seen.has(d.id)) {
+      seen.add(d.id);
+      results.push(d.data() as ReferrerProfile);
+    }
+  }
+
+  return results;
 }
 
 export interface PaginatedResult {
@@ -143,18 +166,13 @@ export async function getVisibleReferrers(cursor?: unknown): Promise<PaginatedRe
 }
 
 export async function getAllReferrers(statusFilter?: ListingStatus): Promise<ReferrerProfile[]> {
-  let q;
-  if (statusFilter) {
-    q = query(
-      collection(db, 'referrers'),
-      where('status', '==', statusFilter),
-      orderBy('companyNameLower'),
-    );
-  } else {
-    q = query(collection(db, 'referrers'), orderBy('companyNameLower'));
-  }
+  const q = query(collection(db, 'referrers'), orderBy('companyNameLower'));
   const snap = await getDocs(q);
-  return snap.docs.map((d) => d.data() as ReferrerProfile);
+  const all = snap.docs.map((d) => d.data() as ReferrerProfile);
+  if (statusFilter) {
+    return all.filter((r) => r.status === statusFilter);
+  }
+  return all;
 }
 
 export async function updateReferrerStatus(
@@ -228,4 +246,23 @@ export async function getAdminLogs(limitCount = 100): Promise<AdminLog[]> {
   const q = query(collection(db, 'adminLogs'), orderBy('createdAt', 'desc'), limit(limitCount));
   const snap = await getDocs(q);
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as AdminLog);
+}
+
+// --- Feature Flags ---
+
+const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
+  autoApproveListings: true,
+};
+
+export async function getFeatureFlags(): Promise<FeatureFlags> {
+  const snap = await getDoc(doc(db, 'settings', 'featureFlags'));
+  if (!snap.exists()) return DEFAULT_FEATURE_FLAGS;
+  return { ...DEFAULT_FEATURE_FLAGS, ...snap.data() } as FeatureFlags;
+}
+
+export async function updateFeatureFlag<K extends keyof FeatureFlags>(
+  key: K,
+  value: FeatureFlags[K],
+): Promise<void> {
+  await setDoc(doc(db, 'settings', 'featureFlags'), { [key]: value }, { merge: true });
 }

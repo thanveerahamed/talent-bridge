@@ -1,13 +1,21 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router';
 import { FirebaseError } from 'firebase/app';
 import { useAuth } from '@/hooks/use-auth';
-import { resendVerificationEmail } from '@/lib/auth';
+import { resendVerificationEmail, signOutUser } from '@/lib/auth';
 import { auth } from '@/lib/firebase';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { FadeIn } from '@/components/animated/fade-in';
-import { MailCheck, RefreshCw, Loader2 } from 'lucide-react';
+import { DeleteAccountButton } from '@/components/delete-account-button';
+import { MailCheck, RefreshCw, Loader2, LogOut } from 'lucide-react';
 import { toast } from 'sonner';
 
 function getVerificationErrorMessage(err: unknown): string {
@@ -29,13 +37,24 @@ function getVerificationErrorMessage(err: unknown): string {
   }
 }
 
+const COOLDOWN_SECONDS = 60;
+
 export function VerifyEmailPage() {
   const { user, isEmailVerified } = useAuth();
   const navigate = useNavigate();
   const [resending, setResending] = useState(false);
   const [checking, setChecking] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
 
-  const handleResend = async () => {
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const timer = setInterval(() => {
+      setCooldown((prev) => prev - 1);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [cooldown]);
+
+  const handleResend = useCallback(async () => {
     const currentUser = auth.currentUser ?? user;
     if (!currentUser) {
       toast.error('Please sign in again before resending verification email.');
@@ -52,12 +71,13 @@ export function VerifyEmailPage() {
     try {
       await resendVerificationEmail(currentUser);
       toast.success('Verification email sent!');
+      setCooldown(COOLDOWN_SECONDS);
     } catch (err: unknown) {
       toast.error(getVerificationErrorMessage(err));
     } finally {
       setResending(false);
     }
-  };
+  }, [user, isEmailVerified, navigate]);
 
   const handleCheckNow = async () => {
     if (!auth.currentUser) {
@@ -96,6 +116,10 @@ export function VerifyEmailPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/50 dark:text-amber-200">
+              <p>📬 Please check your spam folder. Sometimes the email reaches there.</p>
+            </div>
+
             <p className="text-center text-sm text-muted-foreground">
               Click the link in the email to verify your account, then use the button below to
               continue.
@@ -109,7 +133,7 @@ export function VerifyEmailPage() {
               <Button
                 variant="outline"
                 onClick={handleResend}
-                disabled={resending || isEmailVerified || !user}
+                disabled={resending || isEmailVerified || !user || cooldown > 0}
                 className="w-full"
               >
                 {resending ? (
@@ -117,10 +141,33 @@ export function VerifyEmailPage() {
                 ) : (
                   <RefreshCw className="mr-2 h-4 w-4" />
                 )}
-                {isEmailVerified ? 'Email verified' : 'Resend verification email'}
+                {isEmailVerified
+                  ? 'Email verified'
+                  : cooldown > 0
+                    ? `Resend in ${cooldown}s`
+                    : 'Resend verification email'}
               </Button>
             </div>
           </CardContent>
+          <CardFooter className="flex-col gap-2 border-t pt-4">
+            <p className="text-xs text-muted-foreground text-center">
+              Want to use a different account?
+            </p>
+            <div className="grid w-full grid-cols-2 gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={async () => {
+                  await signOutUser();
+                  navigate('/login', { replace: true });
+                }}
+              >
+                <LogOut className="mr-2 h-4 w-4" />
+                Sign Out
+              </Button>
+              <DeleteAccountButton variant="full" />
+            </div>
+          </CardFooter>
         </Card>
       </FadeIn>
     </div>
