@@ -9,6 +9,7 @@ import {
   saveReferrerProfile,
   toggleReferrerVisibility,
   updateUserRoles,
+  getFeatureFlags,
 } from '@/lib/firestore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -150,6 +151,14 @@ export function ReferrerProfilePage() {
     if (!user || !profile) return;
     setLoading(true);
     try {
+      const existingProfile = await getReferrerProfile(user.uid);
+      const flags = await getFeatureFlags();
+      const status = existingProfile
+        ? existingProfile.status
+        : flags.autoApproveListings
+          ? 'approved'
+          : 'pending';
+
       const referrerData: Omit<ReferrerProfile, 'createdAt' | 'updatedAt'> = {
         uid: user.uid,
         firstName: data.firstName,
@@ -164,7 +173,7 @@ export function ReferrerProfilePage() {
         companyCareerLink: data.companyCareerLink ?? '',
         preferredContact: data.preferredContact as ContactMethod[],
         visible: profileVisible,
-        status: 'pending',
+        status,
       };
 
       await saveReferrerProfile(referrerData);

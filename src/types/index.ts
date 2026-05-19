@@ -67,3 +67,8 @@ export interface AdminLog {
   metadata?: Record<string, string>;
   createdAt: Date;
 }
+
+// Feature flags stored in settings/featureFlags
+export interface FeatureFlags {
+  autoApproveListings: boolean;
+}

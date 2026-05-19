@@ -25,6 +25,7 @@ import {
   Sun,
   Moon,
   ShieldCheck,
+  Settings,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { signOutUser } from '@/lib/auth';
@@ -42,6 +43,7 @@ const navItems: Record<UserRole, { to: string; label: string; icon: typeof Searc
     { to: '/admin/listings', label: 'Listings', icon: FileText },
     { to: '/admin/users', label: 'Users', icon: Users },
     { to: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
+    { to: '/admin/settings', label: 'Settings', icon: Settings },
   ],
 };
 

@@ -24,6 +24,7 @@ import type {
   ListingStatus,
   ContactMethod,
   AdminAction,
+  FeatureFlags,
 } from '@/types';
 
 // ─── Users ──────────────────────────────────────────
@@ -228,4 +229,23 @@ export async function getAdminLogs(limitCount = 100): Promise<AdminLog[]> {
   const q = query(collection(db, 'adminLogs'), orderBy('createdAt', 'desc'), limit(limitCount));
   const snap = await getDocs(q);
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as AdminLog);
+}
+
+// --- Feature Flags ---
+
+const DEFAULT_FEATURE_FLAGS: FeatureFlags = {
+  autoApproveListings: true,
+};
+
+export async function getFeatureFlags(): Promise<FeatureFlags> {
+  const snap = await getDoc(doc(db, 'settings', 'featureFlags'));
+  if (!snap.exists()) return DEFAULT_FEATURE_FLAGS;
+  return { ...DEFAULT_FEATURE_FLAGS, ...snap.data() } as FeatureFlags;
+}
+
+export async function updateFeatureFlag<K extends keyof FeatureFlags>(
+  key: K,
+  value: FeatureFlags[K],
+): Promise<void> {
+  await setDoc(doc(db, 'settings', 'featureFlags'), { [key]: value }, { merge: true });
 }

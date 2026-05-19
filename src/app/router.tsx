@@ -15,6 +15,7 @@ import { MyListingPage } from './routes/referrer/my-listing';
 import { AdminListingsPage } from './routes/admin/listings';
 import { AdminUsersPage } from './routes/admin/users';
 import { AdminAnalyticsPage } from './routes/admin/analytics';
+import { AdminSettingsPage } from './routes/admin/settings';
 import { PrivacyPage } from './routes/privacy';
 
 export const router = createBrowserRouter([
@@ -57,6 +58,7 @@ export const router = createBrowserRouter([
           { path: '/admin/listings', element: <AdminListingsPage /> },
           { path: '/admin/users', element: <AdminUsersPage /> },
           { path: '/admin/analytics', element: <AdminAnalyticsPage /> },
+          { path: '/admin/settings', element: <AdminSettingsPage /> },
 
           // General
           { path: '/privacy', element: <PrivacyPage /> },
