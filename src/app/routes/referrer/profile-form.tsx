@@ -169,6 +169,10 @@ export function ReferrerProfilePage() {
         whatsAppNumber: data.whatsAppNumber ?? '',
         companyName: data.companyName,
         companyNameLower: data.companyName.toLowerCase().trim(),
+        companySearchTerms: data.companyName
+          .split(',')
+          .map((s) => s.trim().toLowerCase())
+          .filter(Boolean),
         companyRole: data.companyRole,
         companyCareerLink: data.companyCareerLink ?? '',
         preferredContact: data.preferredContact as ContactMethod[],
@@ -295,7 +299,15 @@ export function ReferrerProfilePage() {
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="companyName">Company Name</Label>
-                  <Input id="companyName" placeholder="Acme Corp" {...register('companyName')} />
+                  <Input
+                    id="companyName"
+                    placeholder="e.g. Google, Alphabet Inc."
+                    {...register('companyName')}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Comma-separated if you want to include abbreviations or full name (e.g. "IBM,
+                    International Business Machines")
+                  </p>
                   {errors.companyName && (
                     <p className="text-sm text-destructive">{errors.companyName.message}</p>
                   )}

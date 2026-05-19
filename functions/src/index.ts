@@ -1,4 +1,5 @@
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
+import { onDocumentCreated } from 'firebase-functions/v2/firestore';
 import { defineSecret } from 'firebase-functions/params';
 import { initializeApp } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
@@ -8,6 +9,7 @@ initializeApp();
 const db = getFirestore();
 
 const RESEND_API_KEY = defineSecret('RESEND_API_KEY');
+const ADMIN_EMAIL = 'thanveerahamed.developer@gmail.com';
 
 /**
  * Send a contact email from a seeker to a referrer via Resend.
@@ -135,3 +137,65 @@ export const setAdminRole = onCall({ region: 'europe-west1' }, async (request) =
 
   return { success: true };
 });
+
+/**
+ * Notify admin via email when a new referrer listing is created.
+ */
+export const onNewReferrerListing = onDocumentCreated(
+  { document: 'referrers/{uid}', secrets: [RESEND_API_KEY], region: 'europe-west1' },
+  async (event) => {
+    const snap = event.data;
+    if (!snap) return;
+
+    const referrer = snap.data();
+    const resend = new Resend(RESEND_API_KEY.value());
+
+    const { error } = await resend.emails.send({
+      from: 'TalentBridge <noreply@im-nl-talent-bridge.creativetechstudio.dev>',
+      to: [ADMIN_EMAIL],
+      subject: `New Referrer Listing: ${referrer.firstName} ${referrer.lastName} (${referrer.companyName})`,
+      html: `
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #2563eb;">New Referrer Listing Created</h2>
+          <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
+            <tr>
+              <td style="padding: 8px 12px; font-weight: 600; color: #374151;">Name</td>
+              <td style="padding: 8px 12px;">${referrer.firstName} ${referrer.lastName}</td>
+            </tr>
+            <tr style="background: #f9fafb;">
+              <td style="padding: 8px 12px; font-weight: 600; color: #374151;">Company</td>
+              <td style="padding: 8px 12px;">${referrer.companyName}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 12px; font-weight: 600; color: #374151;">Role</td>
+              <td style="padding: 8px 12px;">${referrer.companyRole}</td>
+            </tr>
+            <tr style="background: #f9fafb;">
+              <td style="padding: 8px 12px; font-weight: 600; color: #374151;">Email</td>
+              <td style="padding: 8px 12px;">${referrer.email || 'Not provided'}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 12px; font-weight: 600; color: #374151;">Status</td>
+              <td style="padding: 8px 12px;">${referrer.status}</td>
+            </tr>
+            <tr style="background: #f9fafb;">
+              <td style="padding: 8px 12px; font-weight: 600; color: #374151;">Preferred Contact</td>
+              <td style="padding: 8px 12px;">${(referrer.preferredContact || []).join(', ')}</td>
+            </tr>
+          </table>
+          <p style="margin-top: 16px;">
+            <a href="https://im-nl-talent-bridge.creativetechstudio.dev/admin/listings" style="display: inline-block; padding: 10px 20px; background-color: #2563eb; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 600;">
+              View in Admin Panel
+            </a>
+          </p>
+          <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 24px 0;" />
+          <p style="color: #6b7280; font-size: 12px;">TalentBridge Admin Notification</p>
+        </div>
+      `,
+    });
+
+    if (error) {
+      console.error('Failed to send admin notification:', error);
+    }
+  },
+);

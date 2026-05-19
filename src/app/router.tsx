@@ -41,6 +41,9 @@ export const router = createBrowserRouter([
       // Reset password (from email link)
       { path: '/reset-password', element: <ResetPasswordPage /> },
 
+      // Public pages
+      { path: '/privacy', element: <PrivacyPage /> },
+
       // Protected app routes
       {
         element: <AppLayout />,
@@ -59,9 +62,6 @@ export const router = createBrowserRouter([
           { path: '/admin/users', element: <AdminUsersPage /> },
           { path: '/admin/analytics', element: <AdminAnalyticsPage /> },
           { path: '/admin/settings', element: <AdminSettingsPage /> },
-
-          // General
-          { path: '/privacy', element: <PrivacyPage /> },
         ],
       },
 

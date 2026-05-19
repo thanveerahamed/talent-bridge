@@ -56,14 +56,7 @@ export function ForgotPasswordPage() {
           {sent ? (
             <>
               <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/50 dark:text-amber-200">
-                <p className="font-medium">📬 Check your spam folder</p>
-                <p className="mt-1">
-                  The password reset email is sent from{' '}
-                  <span className="font-mono text-xs">
-                    noreply@im-nl-talent-bridge.firebaseapp.com
-                  </span>{' '}
-                  and may end up in your Spam or Junk folder.
-                </p>
+                <p>📬 Please check your spam folder. Sometimes the email reaches there.</p>
               </div>
 
               <Button variant="outline" className="w-full" onClick={() => navigate('/login')}>

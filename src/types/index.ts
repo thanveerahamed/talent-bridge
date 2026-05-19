@@ -39,6 +39,7 @@ export interface ReferrerProfile {
   whatsAppNumber: string;
   companyName: string;
   companyNameLower: string;
+  companySearchTerms?: string[];
   companyRole: string;
   companyCareerLink: string;
   preferredContact: ContactMethod[];

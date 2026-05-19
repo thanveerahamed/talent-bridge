@@ -99,6 +99,11 @@ export function LoginPage() {
               Sign up
             </Link>
           </p>
+          <p className="mt-2 text-center text-xs text-muted-foreground">
+            <Link to="/privacy" className="text-primary hover:underline">
+              Privacy Policy
+            </Link>
+          </p>
         </CardContent>
       </Card>
     </FadeIn>
