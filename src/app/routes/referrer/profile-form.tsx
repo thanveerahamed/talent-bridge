@@ -17,7 +17,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { FadeIn } from '@/components/animated/fade-in';
-import { Loader2, Save, Eye, EyeOff } from 'lucide-react';
+import { Loader2, Save, Eye, EyeOff, Info } from 'lucide-react';
 import { toast } from 'sonner';
 import type { ContactMethod, ReferrerProfile } from '@/types';
 
@@ -188,7 +188,11 @@ export function ReferrerProfilePage() {
         await updateUserRoles(profile.uid, newRoles);
       }
 
-      toast.success('Profile saved! It will be reviewed by an admin.');
+      toast.success(
+        status === 'approved'
+          ? 'Profile saved! Your listing is live.'
+          : 'Profile saved! It will be reviewed by an admin.',
+      );
     } catch {
       toast.error('Failed to save profile. Please try again.');
     } finally {
@@ -230,6 +234,16 @@ export function ReferrerProfilePage() {
             Share your details so talent seekers can reach out to you.
           </p>
         </div>
+
+        {!hasExistingProfile && (
+          <div className="flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-900 dark:bg-blue-950">
+            <Info className="mt-0.5 h-5 w-5 shrink-0 text-blue-600 dark:text-blue-400" />
+            <p className="text-sm text-blue-800 dark:text-blue-200">
+              Your profile needs to be saved for it to be visible to seekers. Fill in the details
+              below and click <strong>Save Profile</strong>.
+            </p>
+          </div>
+        )}
 
         <Card>
           <CardHeader>
