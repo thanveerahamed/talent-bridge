@@ -188,7 +188,11 @@ export function ReferrerProfilePage() {
         await updateUserRoles(profile.uid, newRoles);
       }
 
-      toast.success('Profile saved! It will be reviewed by an admin.');
+      toast.success(
+        status === 'approved'
+          ? 'Profile saved! Your listing is live.'
+          : 'Profile saved! It will be reviewed by an admin.',
+      );
     } catch {
       toast.error('Failed to save profile. Please try again.');
     } finally {
